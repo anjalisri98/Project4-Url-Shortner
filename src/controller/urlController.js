@@ -22,15 +22,6 @@ redisClient.on("connect", async function () {
 });
 
 
-
-//1. connect to the server
-//2. use the commands :
-
-//Connection setup for redis
-
-const SET_ASYNC = promisify(redisClient.SET).bind(redisClient);
-const GET_ASYNC = promisify(redisClient.GET).bind(redisClient);
-
 const isValidRequest = function (reqBody) {
     return Object.keys(reqBody).length > 0;
 }
@@ -107,29 +98,33 @@ const shortenUrl = async (req, res) => {
     }
 }
 
-const getUrl = async (req, res) => {
-    try {
-        let urlCode = req.params.urlCode
-        
-        let cacheProfileData = await GET_ASYNC(`${urlCode}`)
 
-        console.log(cacheProfileData)
+const getUrl = async (req,res) =>{
+    try{
+let urlCode = req.params.urlCode
+let cahcedUrlData = await GET_ASYNC(`${urlCode}`)
 
-        if (cacheProfileData) {
-            let response = JSON.parse(cacheProfileData)
-            return res.redirect(302, `${response.longUrl}`)
-        } else {
-            let urlData = await urlModel.findOne({ urlCode: req.params.urlCode })
-            console.log(urlData)
-            await SET_ASYNC(`${req.params.urlCode}`, JSON.stringify(urlData))
-            return res.redirect(302, urlData.longUrl)
+let data = JSON.parse(cahcedUrlData);
 
 
-        }
+if (cahcedUrlData) {
+    res.status(301).redirect(301, `${data.longUrl}`)
+}
+else{
+let urlData  = await urlModel.findOne({urlCode:urlCode})
+
+if (!urlData) {
+    return res.status(400).send({ status: false, msg: "this short url does not exist please provide valid url code " })
+}
+
+
+await SET_ASYNC(`${urlCode}`, JSON.stringify(urlData))
+
+return res.status(301).redirect(301,`${urlData.longUrl}`)
+}
 
     }
-    catch (err) {
-        console.log(err)
+    catch(error){
         res.status(500).send({ status: false, message: err.message })
     }
 }

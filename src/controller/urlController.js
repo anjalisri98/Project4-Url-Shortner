@@ -7,20 +7,28 @@ const redis = require("redis");
 
 const { promisify } = require("util");
 
-// Connect to redis
+//Connect to redis
 const redisClient = redis.createClient(
-    13613,
-    "redis-13613.c212.ap-south-1-1.ec2.cloud.redislabs.com",
-    { no_ready_check: true }
+  14951,
+  "redis-14951.c212.ap-south-1-1.ec2.cloud.redislabs.com",
+  { no_ready_check: true }
 );
-redisClient.auth("tkxuRsvItmWDXmxktzlBZsXHM9n4CRLI", function (err) {
-    if (err) throw err;
+redisClient.auth("L5yqDhOI1FMd2je3LWxV4ESAua90Mw0U", function (err) {
+  if (err) throw err;
 });
 
 redisClient.on("connect", async function () {
-    console.log("Connected to Redis..");
+  console.log("Connected to Redis..");
 });
 
+
+
+//Connection setup for redis
+
+const SET_ASYNC = promisify(redisClient.SET).bind(redisClient);
+const GET_ASYNC = promisify(redisClient.GET).bind(redisClient);
+
+//===============Validation Functions============================
 
 const isValidRequest = function (reqBody) {
     return Object.keys(reqBody).length > 0;
@@ -28,7 +36,7 @@ const isValidRequest = function (reqBody) {
 const isValidValue = function (value) {
     if (typeof value === 'undefined' || value === null) return false
     if (typeof value === 'string' && value.trim().length === 0) return false
-    if( typeof value === 'number' && value.toString().trim().length === 0) return false;
+   // if( typeof value === 'number' && value.toString().trim().length === 0) return false;
     return true;
 }
 
@@ -36,6 +44,8 @@ const isValidUrl = function (url) {
     const urlRegex = /(http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-/]))?/
     return urlRegex.test(url)
 }
+
+//============= Create Short Url================================
 
 const shortenUrl = async (req, res) => {
     try {
@@ -55,7 +65,7 @@ const shortenUrl = async (req, res) => {
         if (!validUrl.isUri(baseUrl)) return res.status(400).send({ status: false, message: `${baseUrl} is invalid base Url` })
 
      //if the Long url is already exist
-        const alreadyExistUrl = await urlModel.findOne({ longUrl })
+        const alreadyExistUrl = await urlModel.findOne({ longUrl }).select({createdAt:0,updatedAt:0,__v:0,_id:0})
         if (alreadyExistUrl) {
             res.status(200).send({ status:true, "message": "Shorten link already generated previously", data: alreadyExistUrl })
         } else {
@@ -98,6 +108,7 @@ const shortenUrl = async (req, res) => {
     }
 }
 
+//===========================Get/:urlCode============================
 
 const getUrl = async (req,res) =>{
     try{

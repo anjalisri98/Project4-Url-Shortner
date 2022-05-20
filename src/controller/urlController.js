@@ -84,13 +84,15 @@ const shortenUrl = async (req, res) => {
             await SET_ASYNC(`${req.body.longUrl}`, JSON.stringify(alreadyExistUrl));
             return res.status(200).send({ status: true, message: "Shorten link already generated previously", data: alreadyExistUrl })
         } else {
-
+            
+            //Generating shortId
             let shortUrlCode = shortId.generate()
 
             //if the Urlcode is already exist
             const alreadyExistCode = await urlModel.findOne({ urlCode: shortUrlCode })
             if (alreadyExistCode) return res.status(400).send({ status: false, message: "It seems You Have To Hit The Api Again" })
-
+            
+            //formating shortUrl
             let shortUrl = baseUrl + '/' + shortUrlCode
 
 

@@ -2,7 +2,10 @@ const express = require("express");
 const router = express.Router();
 const urlController = require("../controller/urlController")
 
+// Api to create shortUrl
 router.post("/url/shortener",urlController.shortenUrl)
+
+//Api for fetching data
 router.get("/:urlCode",urlController.getUrl)
 
 // if api is invalid OR wrong URL

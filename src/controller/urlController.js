@@ -36,7 +36,6 @@ const isValidRequest = function (reqBody) {
 const isValidValue = function (value) {
     if (typeof value === 'undefined' || value === null) return false
     if (typeof value === 'string' && value.trim().length === 0) return false
-    // if( typeof value === 'number' && value.toString().trim().length === 0) return false;
     return true;
 }
 
@@ -61,38 +60,38 @@ const shortenUrl = async (req, res) => {
         //if (!isValidUrl(longUrl)) return res.status(400).send({ status: false, message: "Long Url is invalid reg." })
 
         let baseUrl = "http://localhost:3000"
+
         // validation for base Url
         if (!validUrl.isWebUri(baseUrl)) return res.status(400).send({ status: false, message: `${baseUrl} is invalid base Url` })
 
+
         //if the Long url is already exist
-        const alreadyExistUrl = await urlModel.findOne({ longUrl }).select({ createdAt: 0, updatedAt: 0, __v: 0, _id: 0 })
+
+        //  check for data in the cache
+        let cachedlinkdata = await GET_ASYNC(`${req.body.longUrl}`)
+
+        if (cachedlinkdata) {
+            let change = JSON.parse(cachedlinkdata)
+            return res.status(200).send({ status: true, redisdata: change })
+        }
+
+        // check for data in the Database
+        const alreadyExistUrl = await urlModel.findOne({ longUrl: longUrl }).select({ createdAt: 0, updatedAt: 0, __v: 0, _id: 0 })
+
         if (alreadyExistUrl) {
-            res.status(200).send({ status: true, message: "Shorten link already generated previously", data: alreadyExistUrl })
+            //setting data in cache
+            await SET_ASYNC(`${req.body.longUrl}`, JSON.stringify(alreadyExistUrl));
+            return res.status(200).send({ status: true, message: "Shorten link already generated previously", data: alreadyExistUrl })
         } else {
 
             let shortUrlCode = shortId.generate()
 
-            if (validUrl.isUri(longUrl)) {
-                const urldata = await GET_ASYNC(`${longUrl}`)
-                const urlRes = JSON.parse(urldata)
-                if (urldata) return res.status(200).send({ status: true, message: `data for  ${longUrl}from the cache`, data: urlRes })
-            } else {
-                const url = await urlModel.findOne({ longUrl: longUrl }).select({ id: 0, longUrl: 1, shortUrl: 1, urlCode: 1 })
-                if (url) {
-                    await SET_ASYNC(`${longUrl}`, JSON.stringify(url))
-
-                    return res.status(200).send({ status: true, msg: "fetch from db", data: url })
-                }
-            }
-
             //if the Urlcode is already exist
             const alreadyExistCode = await urlModel.findOne({ urlCode: shortUrlCode })
-            if (alreadyExistCode) return res.status(400).send({ status: false, message: `${alreadyExistCode} is already exist` })
+            if (alreadyExistCode) return res.status(400).send({ status: false, message: "It seems You Have To Hit The Api Again" })
 
             let shortUrl = baseUrl + '/' + shortUrlCode
 
-            const alreadyShortUrl = await urlModel.findOne({ shortUrl })
-            if (alreadyShortUrl) return res.status(400).send({ status: false, message: `${alreadyShortUrl} is already exist` })
 
             const generateUrl = {
                 longUrl: longUrl,
@@ -100,9 +99,15 @@ const shortenUrl = async (req, res) => {
                 urlCode: shortUrlCode
             }
 
-            await urlModel.create(generateUrl)
+
+            let createUrl = await urlModel.create(generateUrl)
+
+            // setting data in cache
+            await SET_ASYNC(`${longUrl}`, JSON.stringify(generateUrl))
+
             return res.status(201).send({ status: true, message: "Short url Successfully created", data: generateUrl })
         }
+
     } catch (err) {
         return res.status(500).send({ status: false, message: err.message })
     }
@@ -121,7 +126,7 @@ const getUrl = async (req, res) => {
 
         //if data present in cache
         if (cahcedUrlData) {
-            res.status(301).redirect(301, `${data.longUrl}`)
+            res.status(302).redirect(`${data.longUrl}`)
         }
         else {
 
@@ -135,7 +140,7 @@ const getUrl = async (req, res) => {
             //setting data in cache
             await SET_ASYNC(`${urlCode}`, JSON.stringify(urlData))
 
-            return res.status(301).redirect(301, `${urlData.longUrl}`)
+            return res.status(302).redirect(`${urlData.longUrl}`)
         }
 
     }

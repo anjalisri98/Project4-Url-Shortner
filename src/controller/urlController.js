@@ -36,7 +36,7 @@ const isValidRequest = function (reqBody) {
 const isValidValue = function (value) {
     if (typeof value === 'undefined' || value === null) return false
     if (typeof value === 'string' && value.trim().length === 0) return false
-    if(typeof value === 'number') return false
+    //if(typeof value === 'number') return false
     return true;
 }
 
@@ -57,7 +57,7 @@ const shortenUrl = async (req, res) => {
 
 
         //validation for Long Url
-        if (!validUrl.isWebUri(longUrl)) return res.status(400).send({ status: false, message: "Long Url is invalid." })
+        if (!validUrl.isWebUri(longUrl.toString().trim())) return res.status(400).send({ status: false, message: "Long Url is invalid." })
         //if (!isValidUrl(longUrl)) return res.status(400).send({ status: false, message: "Long Url is invalid reg." })
 
         let baseUrl = "http://localhost:3000"
